@@ -23,20 +23,22 @@ from .core import (
 )
 
 
-if Version(paddle.__version__) < Version("2.6.0"):
-    raise RuntimeError("TensorLy only supports paddle v2.6.0 and above.")
+if Version(paddle.__version__) < Version("2.6.0") and Version(
+    paddle.__version__
+) != Version("0.0.0"):
+    raise RuntimeError(
+        "TensorLy only supports paddle >= 2.6.0 or develop(0.0.0), "
+        f"but found {Version(paddle.__version__)}"
+    )
 
 
 class PaddleBackend(Backend, backend_name="paddle"):
-    # set default device to cpu
-    place = paddle.device.set_device("cpu")
-
     @staticmethod
     def context(tensor: paddle.Tensor):
         return {
             "dtype": tensor.dtype,
-            # "place": tensor.place,
-            # "stop_gradient": tensor.stop_gradient,
+            # "device": tensor.place,
+            # "requires_grad": not tensor.stop_gradient,
         }
 
     @staticmethod
@@ -68,14 +70,7 @@ class PaddleBackend(Backend, backend_name="paddle"):
             tensor = data.clone().detach()
         else:
             # Else, use Paddle's tensor constructor
-            if place is None:
-                # set default device to cpu when place is not specified
-                # and  gpu is avaiable
-                current_device = paddle.device.get_device()
-                if current_device.startswith("gpu"):
-                    place = "cpu"
-
-            tensor = paddle.to_tensor(data, place=place)
+            tensor = paddle.to_tensor(data)
 
         # Set dtype/place/stop_gradient if specified
         if dtype is not None:
